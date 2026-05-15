@@ -1,44 +1,37 @@
-# kimi-code
+# km
 
 > **Kimi-powered coding agent CLI** — plan, code, review, and automate in your terminal.
 
-[**中文文档**](README.zh-CN.md)
+`km` is a terminal-based AI coding assistant powered by Moonshot AI (Kimi). It supports four operating modes, full tool access (file operations, shell commands, search), and is designed to be used like Claude Code, Codex, or DeepSeek TUI — but backed by Kimi's language models.
 
-`kimi-code` is a terminal-based AI coding assistant powered by Moonshot AI (Kimi). It supports four operating modes, full tool access (file operations, shell commands, search), and is designed to be used like Claude Code, Codex, or DeepSeek TUI — but backed by Kimi's language models.
+> **This project was fully generated and maintained by DeepSeek** — code refactoring, npm dependency simplification (removing C++ native modules), installation fixes, rebranding (kimi-code to km), Gitee push and configuration.
 
 ## Features
 
 - **Solo mode** — Single Q&A, ask one question, get one answer
 - **Chat mode** — Interactive conversation with context history
-- **Plan mode** — Analyze → plan → execute step by step with user approval
+- **Plan mode** — Analyze to plan to execute step by step with user approval
 - **Agent mode** — Fully autonomous: reads files, writes code, runs commands
 - **Tool system**: Read, Write, Edit, Bash, Glob, Grep, Exit
 - **Cross-platform**: Windows, macOS, Linux (Node.js 18+)
-- **npm-installable**: `npm install -g kimi-code`
+- **Pure JavaScript** — No C++ compilation required
 
 ## Installation
 
-### Via npm (recommended)
+### Local install (recommended)
 
 ```bash
-npm install -g kimi-code
-```
-
-### Via npx (no install)
-
-```bash
-npx kimi-code init
-npx kimi-code solo "What is the capital of France?"
-```
-
-### From source
-
-```bash
-git clone https://github.com/moonshotai/kimi-code.git
-cd kimi-code
+git clone https://gitee.com/all-xu/km.git
+cd km
 npm install
 npm run build
 npm link
+```
+
+### Single binary (no Node.js required)
+
+```bash
+bun build --compile ./src/index.ts --outfile km
 ```
 
 ## Quick Start
@@ -46,54 +39,42 @@ npm link
 ### 1. Initialize
 
 ```bash
-kimi-code init
+km init
 ```
 
-This will prompt for your Moonshot API key and save it to `~/.kimi-code/config.json`.
+This will prompt for your Moonshot API key and save it to `~/.km/config.json`.
 
 **API Key**: Get yours at [platform.moonshot.cn](https://platform.moonshot.cn/console/api-keys)
 
 ### 2. Solo Mode
 
-Ask a single question:
-
 ```bash
-kimi-code solo "Explain Rust's ownership model"
-kimi-code solo "Write a quick sort in Python" --model moonshot-v1-32k
+km solo "Explain Rust ownership model"
+km solo "Write a quick sort in Python" --model moonshot-v1-32k
 ```
 
 ### 3. Chat Mode
 
-Interactive conversation:
-
 ```bash
-kimi-code chat
+km chat
 ```
 
 Type your messages, use Ctrl+D or `.done` to finish input, and `/exit` to quit.
 
 ### 4. Plan Mode
 
-Analyze a task, create a plan, then execute:
-
 ```bash
-kimi-code plan "Build a REST API with Express and TypeScript"
-kimi-code plan "Refactor the auth module" --interactive
+km plan "Build a REST API with Express and TypeScript"
+km plan "Refactor the auth module" --interactive
 ```
-
-With `--interactive`, the plan is shown for approval before execution.
 
 ### 5. Agent Mode
 
-Fully autonomous with file and shell access:
-
 ```bash
-kimi-code agent "Add a health check endpoint to the server"
-kimi-code agent "Find and fix all TypeScript errors" -y
-kimi-code agent --interactive
+km agent "Add a health check endpoint to the server"
+km agent "Find and fix all TypeScript errors" -y
+km agent --interactive
 ```
-
-The `-y` flag auto-approves tool calls for faster execution.
 
 ## Configuration
 
@@ -108,7 +89,7 @@ The `-y` flag auto-approves tool calls for faster execution.
 
 ### Config file
 
-Location: `~/.kimi-code/config.json`
+Location: `~/.km/config.json`
 
 ```json
 {
@@ -123,69 +104,53 @@ Location: `~/.kimi-code/config.json`
 Manage via CLI:
 
 ```bash
-kimi-code config --show
-kimi-code config --set model=moonshot-v1-128k
-kimi-code config --set auto_approve=true
+km config --show
+km config --set model=moonshot-v1-128k
+km config --set auto_approve=true
 ```
 
 ### Available models
 
 ```bash
-kimi-code models
+km models
 ```
 
 ## Architecture
 
 ```
-kimi-code/
-├── src/
-│   ├── index.ts          # Entry point
-│   ├── cli.ts            # CLI command definitions
-│   ├── config.ts         # Configuration management
-│   ├── display.ts        # Terminal UI utilities
-│   ├── types.ts          # Core type definitions
-│   ├── llm/
-│   │   ├── client.ts     # Moonshot API client (OpenAI-compatible)
-│   │   └── prompts.ts    # System prompts + tool definitions
-│   ├── agent/
-│   │   └── loop.ts       # Core agent loop (think → act → observe)
-│   ├── tools/
-│   │   └── registry.ts   # Tool execution (Read, Write, Edit, Bash, etc.)
-│   └── modes/
-│       ├── solo.ts       # Single Q&A
-│       ├── chat.ts       # Interactive conversation
-│       ├── plan.ts       # Plan-then-execute
-│       └── agent.ts      # Full autonomous agent
+km/
+ +-- src/
+     +-- index.ts          # Entry point
+     +-- cli.ts            # CLI command definitions
+     +-- config.ts         # Configuration management
+     +-- display.ts        # Terminal UI utilities
+     +-- types.ts          # Core type definitions
+     +-- llm/
+     |   +-- client.ts     # Moonshot API client (OpenAI-compatible)
+     |   +-- prompts.ts    # System prompts + tool definitions
+     +-- agent/
+     |   +-- loop.ts       # Core agent loop (think -> act -> observe)
+     +-- tools/
+     |   +-- registry.ts   # Tool execution (Read, Write, Edit, Bash, etc.)
+     +-- modes/
+         +-- solo.ts       # Single Q&A
+         +-- chat.ts       # Interactive conversation
+         +-- plan.ts       # Plan-then-execute
+         +-- agent.ts      # Full autonomous agent
 ```
 
-### Agent Loop
+## Repositories
 
-```
-User Input → LLM (with tools) → Tool Calls? → Execute Tools → LLM
-                                ↘ No         → Response → Done
-```
-
-The loop continues until either:
-- The LLM produces a text response (no tool calls)
-- The `Exit` tool is called
-- The maximum number of tool rounds is reached
+- **Gitee**: https://gitee.com/all-xu/km
+- **GitHub**: https://github.com/AICode-World/km
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Type check
 npm run typecheck
-
-# Build
 npm run build
-
-# Run tests
 npm test
-
-# Development (build + run)
 npm run dev -- solo "Hello"
 ```
 
