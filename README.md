@@ -12,6 +12,7 @@
 - **Chat mode** — Interactive conversation with context history
 - **Plan mode** — Analyze to plan to execute step by step with user approval
 - **Agent mode** — Fully autonomous: reads files, writes code, runs commands
+- **Doctor mode** — Diagnose your environment (API key, config, network)
 - **Tool system**: Read, Write, Edit, Bash, Glob, Grep, Exit
 - **Cross-platform**: Windows, macOS, Linux (Node.js 18+)
 - **Pure JavaScript** — No C++ compilation required
@@ -82,6 +83,16 @@ km agent "Find and fix all TypeScript errors" -y
 km agent --interactive
 ```
 
+### 6. Doctor Mode
+
+Diagnose your environment:
+
+```bash
+km doctor
+```
+
+Checks API key presence, config file validity, network connectivity to Moonshot API, and installed version.
+
 ## Configuration
 
 ### Environment variables
@@ -114,6 +125,17 @@ km config --show
 km config --set model=moonshot-v1-128k
 km config --set auto_approve=true
 ```
+
+### Inline --config
+
+Override config on the fly without editing your config file:
+
+```bash
+km --config "model=moonshot-v1-128k,auto_approve=true" agent "Refactor auth"
+km --config "base_url=https://custom.api.com/v1" chat
+```
+
+Supported keys: `api_key`, `base_url`, `model`, `max_tool_rounds`, `auto_approve`.
 
 ### Available models
 
