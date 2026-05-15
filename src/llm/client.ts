@@ -1,14 +1,10 @@
-import OpenAI from "openai";
-import {
-  ChatCompletionMessageParam,
-  ChatCompletionTool,
-} from "openai/resources/chat/completions.js";
+// OpenAI SDK replaced with native fetch (Node 18+)
 import { loadConfig } from "../config.js";
 import { Message, KimiModel, ToolDefinition } from "../types.js";
 import { spinner, dim } from "../display.js";
 
 /** Map our internal ToolDefinition to OpenAI ChatCompletionTool */
-function toOpenAITools(defs: ToolDefinition[]): ChatCompletionTool[] {
+function toOpenAITools(defs: ToolDefinition[]) {
   return defs.map((d) => ({
     type: "function" as const,
     function: {
@@ -20,7 +16,7 @@ function toOpenAITools(defs: ToolDefinition[]): ChatCompletionTool[] {
 }
 
 /** Map our internal Message to OpenAI message format */
-function toOpenAIMessages(msgs: Message[]): ChatCompletionMessageParam[] {
+function toOpenAIMessages(msgs: Message[]) {
   const result: ChatCompletionMessageParam[] = [];
   for (const m of msgs) {
     if (m.role === "system") {
@@ -51,17 +47,21 @@ function toOpenAIMessages(msgs: Message[]): ChatCompletionMessageParam[] {
   return result;
 }
 
-/** Create a fresh OpenAI client */
-function createClient(): OpenAI {
+/** Create API request headers */
+function apiHeaders() {
   const cfg = loadConfig();
-  return new OpenAI({
-    apiKey: cfg.api_key,
-    baseURL: cfg.base_url,
-    maxRetries: 3,
-  });
+  return {
+    "Authorization": `Bearer ${cfg.api_key}`,
+    "Content-Type": "application/json",
+  };
 }
 
-// ── Public API ────────────────────────────────────────────
+/** Build API base URL */
+function apiBaseURL(): string {
+  return loadConfig().base_url;
+}
+
+// ── Public API ────────────────────────────────────────────// ── Public API ────────────────────────────────────────────
 
 export interface LLMResponse {
   content: string;
@@ -74,7 +74,7 @@ export interface LLMResponse {
 }
 
 /**
- * Send messages to Kimi and get a response (streaming with spinner).
+ * Send messages to Kimi and get a response (fetch-based, no openai SDK).
  * If tool_defs is provided, function calling is enabled.
  */
 export async function chat(
@@ -92,22 +92,32 @@ export async function chat(
   const sp = options?.show_spinner !== false ? spinner(`Thinking (${model})…`) : null;
 
   try {
-    const client = createClient();
-    const openaiMessages = toOpenAIMessages(messages);
-    const openaiTools = options?.tools ? toOpenAITools(options.tools) : undefined;
-
-    const response = await client.chat.completions.create({
+    const body: Record<string, unknown> = {
       model,
-      messages: openaiMessages,
-      tools: openaiTools,
+      messages: toOpenAIMessages(messages),
       temperature: options?.temperature ?? 0.2,
       max_tokens: options?.max_tokens ?? 16384,
       stream: false,
+    };
+    if (options?.tools) {
+      body.tools = toOpenAITools(options.tools);
+    }
+
+    const res = await fetch(`${apiBaseURL()}/chat/completions`, {
+      method: "POST",
+      headers: apiHeaders(),
+      body: JSON.stringify(body),
     });
 
     sp?.stop();
 
-    const choice = response.choices[0];
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error(`HTTP ${res.status} ${res.statusText} — ${errBody}`);
+    }
+
+    const data = await res.json();
+    const choice = data.choices?.[0];
     if (!choice) {
       return { content: "" };
     }
@@ -115,17 +125,17 @@ export async function chat(
     const msg = choice.message;
     const result: LLMResponse = {
       content: msg.content || "",
-      usage: response.usage
+      usage: data.usage
         ? {
-            prompt_tokens: response.usage.prompt_tokens,
-            completion_tokens: response.usage.completion_tokens,
-            total_tokens: response.usage.total_tokens,
+            prompt_tokens: data.usage.prompt_tokens,
+            completion_tokens: data.usage.completion_tokens,
+            total_tokens: data.usage.total_tokens,
           }
         : undefined,
     };
 
     if (msg.tool_calls && msg.tool_calls.length > 0) {
-      result.tool_calls = msg.tool_calls.map((tc) => ({
+      result.tool_calls = msg.tool_calls.map((tc: any) => ({
         id: tc.id,
         type: "function" as const,
         function: { name: tc.function.name, arguments: tc.function.arguments },
@@ -140,10 +150,6 @@ export async function chat(
   }
 }
 
-/**
- * Streaming chat — yields text chunks as they arrive.
- * Does NOT support tool calls in streaming mode for simplicity.
- */
 export async function* chatStreaming(
   messages: Message[],
   options?: {
@@ -155,35 +161,69 @@ export async function* chatStreaming(
   const cfg = loadConfig();
   const model = options?.model || cfg.model;
 
-  const client = createClient();
-  const openaiMessages = toOpenAIMessages(messages);
-
-  const stream = await client.chat.completions.create({
+  const body: Record<string, unknown> = {
     model,
-    messages: openaiMessages,
+    messages: toOpenAIMessages(messages),
     temperature: options?.temperature ?? 0.2,
     max_tokens: options?.max_tokens ?? 16384,
     stream: true,
+  };
+
+  const res = await fetch(`${apiBaseURL()}/chat/completions`, {
+    method: "POST",
+    headers: apiHeaders(),
+    body: JSON.stringify(body),
   });
 
-  for await (const chunk of stream) {
-    const delta = chunk.choices[0]?.delta?.content;
-    if (delta) {
-      yield delta;
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Kimi API error: HTTP ${res.status} — ${errBody}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) return;
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6).trim();
+      if (data === "[DONE]") return;
+      try {
+        const chunk = JSON.parse(data);
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) yield delta;
+      } catch {
+        // Skip malformed chunks
+      }
     }
   }
 }
 
-/** List available models from the API */
+/** List available models from the API *//** List available models from the API */
 export async function listModels(): Promise<string[]> {
-  const client = createClient();
-  const response = await client.models.list();
-  return response.data
-    .filter((m) => m.id.startsWith("moonshot"))
-    .map((m) => m.id);
+  const res = await fetch(`${apiBaseURL()}/models`, {
+    headers: apiHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to list models: HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return data.data
+    .filter((m: any) => m.id.startsWith("moonshot"))
+    .map((m: any) => m.id);
 }
 
-/** Simple token count estimation (for context management) */
+/** Simple token count estimation (for context management) *//** Simple token count estimation (for context management) */
 export function estimateTokens(text: string): number {
   if (!text) return 0;
   const cnChars = text.match(/[\u4e00-\u9fff]/g)?.length ?? 0;

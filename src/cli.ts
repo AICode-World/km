@@ -148,7 +148,9 @@ export function createCLI(): Command {
     .option("--model <model>", "Model name (overrides config/env)")
     .option("--mode <mode>", "Default mode when starting interactively (solo|chat|plan|agent)")
     .option("--task <task>", "Task to run immediately")
-    .option("--verbose", "Enable verbose output");
+    .option("--verbose", "Enable verbose output")
+  .option("--mode <mode>", "Default mode: solo|chat|plan|agent")
+  .option("--task <task>", "Task to run immediately");
 
   program.hook("preAction", async (thisCommand) => {
     const opts = thisCommand.opts<{
@@ -209,6 +211,81 @@ export function createCLI(): Command {
         saveConfig({ [key]: value } as any);
         printSuccess(`Set ${key}=${value}`);
       }
+    });
+
+  program.command("doctor")
+    .description("Diagnose configuration and connectivity")
+    .action(async () => {
+      printHeader("solo");
+      printInfo("Running diagnostics...\n");
+
+      // 1. Config file
+      const { configDir, configPath: _cfgPath } = await import("./config.js");
+      const cfgDir = configDir();
+      const cfgPath = _cfgPath();
+      const fsMod = await import("fs");
+      const cfgExists = fsMod.existsSync(cfgPath);
+      console.log("  " + bold("Config file:") + "     " + cfgPath);
+      console.log("  " + bold("  Exists:") + "         " + (cfgExists ? green("yes") : red("no")));
+
+      if (cfgExists) {
+        try {
+          const raw = fsMod.readFileSync(cfgPath, "utf-8");
+          const parsed = JSON.parse(raw);
+          const key = parsed.api_key || "";
+          console.log("  " + bold("  API key:") + "        " + (key ? dim(key.slice(0, 8) + "...") : red("(empty)")));
+          const keyValid = key.length > 0 && key !== ".done";
+          console.log("  " + bold("  Key valid:") + "       " + (keyValid ? green("yes") : red("no")));
+          console.log("  " + bold("  Base URL:") + "        " + (parsed.base_url || "(default)"));
+          console.log("  " + bold("  Model:") + "           " + (parsed.model || "(default)"));
+        } catch (e) {
+          console.log("  " + bold("  Parse:") + "           " + red("corrupt"));
+        }
+      }
+      console.log("");
+
+      // 2. Environment
+      console.log("  " + bold("Env vars:"));
+      const hasKimi = !!process.env.KIMI_API_KEY;
+      const hasMoonshot = !!process.env.MOONSHOT_API_KEY;
+      console.log("  " + bold("  KIMI_API_KEY:") + "     " + (hasKimi ? green("set") : dim("not set")));
+      console.log("  " + bold("  MOONSHOT_API_KEY:") + " " + (hasMoonshot ? green("set") : dim("not set")));
+      console.log("  " + bold("  KIMI_BASE_URL:") + "    " + (process.env.KIMI_BASE_URL ? dim(process.env.KIMI_BASE_URL) : dim("not set")));
+      console.log("");
+
+      // 3. Network connectivity
+      const { loadConfig } = await import("./config.js");
+      const cfg = loadConfig();
+      if (cfg.api_key && cfg.api_key !== ".done") {
+        console.log("  " + bold("Connectivity:"));
+        try {
+          const start = Date.now();
+          const res = await fetch(cfg.base_url + "/models", {
+            headers: { "Authorization": "Bearer " + cfg.api_key },
+          });
+          const ms = Date.now() - start;
+          if (res.ok) {
+            console.log("  " + bold("  API reachable:") + "   " + green("yes (" + ms + "ms)"));
+            const data = await res.json();
+            const models = data.data.filter((m) => m.id.startsWith("moonshot")).map((m) => m.id);
+            console.log("  " + bold("  Models found:") + "    " + models.length);
+            if (models.length > 0) {
+              console.log("  " + bold("  Available:") + "       " + models.slice(0, 5).join(", ") + (models.length > 5 ? "... (+ " + (models.length - 5) + " more)" : ""));
+            }
+          } else {
+            console.log("  " + bold("  API reachable:") + "   " + red("HTTP " + res.status));
+          }
+        } catch (e) {
+          console.log("  " + bold("  API reachable:") + "   " + red(e instanceof Error ? e.message : String(e)));
+        }
+      }
+      console.log("");
+
+      // 4. Version
+      const pkg = JSON.parse(fsMod.readFileSync(path.join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf-8"));
+      console.log("  " + bold("Version:") + "          " + pkg.version);
+      console.log("  " + bold("Node:") + "             " + process.version);
+      console.log("  " + bold("Platform:") + "         " + process.platform + " " + process.arch);
     });
 
   program.command("models").description("List available Moonshot models").action(async () => {

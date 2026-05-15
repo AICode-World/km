@@ -1,21 +1,26 @@
-import chalk from "chalk";
-import ora from "ora";
+// Native ANSI (replaced chalk + ora)
 import { createInterface } from "readline/promises";
 import { ToolCall, ToolResult, RunMode } from "./types.js";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
-// ── Styling helpers ───────────────────────────────────────
+// ── ANSI escape codes (replaces chalk) ────────────────────
 
-export const dim = chalk.dim;
-export const bold = chalk.bold;
-export const green = chalk.green;
-export const red = chalk.red;
-export const yellow = chalk.yellow;
-export const cyan = chalk.cyan;
-export const magenta = chalk.magenta;
-export const gray = chalk.gray;
+const RESET = "\x1b[0m";
+
+function ansi(code) {
+  return (s) => `${code}${s}${RESET}`;
+}
+
+export const dim = ansi("\x1b[2m");
+export const bold = ansi("\x1b[1m");
+export const green = ansi("\x1b[32m");
+export const red = ansi("\x1b[31m");
+export const yellow = ansi("\x1b[33m");
+export const cyan = ansi("\x1b[36m");
+export const magenta = ansi("\x1b[35m");
+export const gray = ansi("\x1b[90m");
 
 /** Header banner for each mode */
 export function printHeader(mode: RunMode): void {
@@ -102,9 +107,25 @@ export function printExit(): void {
   console.log(`\n${dim("Bye!")}\n`);
 }
 
-/** Create a spinner */
+/** Create a spinner (native, no ora) */
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
 export function spinner(text: string) {
-  return ora({ text, color: "cyan" }).start();
+  let i = 0;
+  const id = setInterval(() => {
+    process.stdout.write(`\r\x1b[36m${SPINNER_FRAMES[i]}\x1b[0m ${text}`);
+    i = (i + 1) % SPINNER_FRAMES.length;
+  }, 80);
+
+  function clearLine() {
+    process.stdout.write("\r" + " ".repeat(process.stdout.columns || 60) + "\r");
+  }
+
+  return {
+    stop() { clearInterval(id); clearLine(); },
+    succeed(t) { clearInterval(id); clearLine(); console.log(`\x1b[32m✔\x1b[0m ${t || text}`); },
+    fail(t) { clearInterval(id); clearLine(); console.log(`\x1b[31m✖\x1b[0m ${t || text}`); },
+  };
 }
 
 /** Format code block for display */
