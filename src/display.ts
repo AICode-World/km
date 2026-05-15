@@ -2,6 +2,9 @@ import chalk from "chalk";
 import ora from "ora";
 import { createInterface } from "readline/promises";
 import { ToolCall, ToolResult, RunMode } from "./types.js";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 // ── Styling helpers ───────────────────────────────────────
 
@@ -16,7 +19,12 @@ export const gray = chalk.gray;
 
 /** Header banner for each mode */
 export function printHeader(mode: RunMode): void {
-  const version = "0.1.0";
+  const _disp_dir = dirname(fileURLToPath(import.meta.url));
+  let version = "0.1.0";
+  try {
+    const pkg = JSON.parse(readFileSync(join(_disp_dir, "..", "package.json"), "utf-8"));
+    version = pkg.version;
+  } catch {}
   console.log(
     `\n  ${cyan("✦")} ${bold("km")} ${dim(`v${version}`)}  —  ${modeModeLabel(mode)}\n`
   );

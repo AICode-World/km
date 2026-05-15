@@ -1,4 +1,15 @@
 import { Command } from "commander";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const _cli_dir = dirname(fileURLToPath(import.meta.url));
+function getVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(_cli_dir, "..", "package.json"), "utf-8"));
+    return pkg.version;
+  } catch { return "0.0.0"; }
+}
 import { loadConfig, saveConfig, hasApiKey, promptApiKey } from "./config.js";
 import { listModels } from "./llm/client.js";
 import { runSolo } from "./modes/solo.js";
@@ -24,7 +35,7 @@ export function createCLI(): Command {
   program
     .name("km")
     .description("Kimi-powered coding agent CLI — plan, code, review, and automate")
-    .version("0.1.0")
+    .version(getVersion())
     .option("--api-key <key>", "Moonshot API key (overrides config/env)")
     .option("--model <model>", "Model name (overrides config/env)")
     .option("--verbose", "Enable verbose output");
@@ -32,7 +43,7 @@ export function createCLI(): Command {
   // ── init ────────────────────────────────────────────────
   program
     .command("init")
-    .description("Initialize kimi-code configuration")
+    .description("Initialize km configuration")
     .action(async () => {
       printHeader("solo");
       printInfo("Setting up kimi-code...\n");
@@ -191,7 +202,7 @@ export function createCLI(): Command {
 async function checkApiKey(): Promise<void> {
   if (hasApiKey()) return;
   printInfo("No API key found.");
-  printInfo(`Set via:\n  1. ${bold("kimi-code init")}\n  2. Environment: ${bold("KIMI_API_KEY")}=sk-...\n  3. CLI flag: ${bold("--api-key")}`);
+  printInfo(`Set via:\n  1. ${bold("km init")}\n  2. Environment: ${bold("KIMI_API_KEY")}=sk-...\n  3. CLI flag: ${bold("--api-key")}`);
   const key = await promptApiKey();
   saveConfig({ api_key: key });
   printSuccess("API key saved");
