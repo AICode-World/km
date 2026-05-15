@@ -4,14 +4,14 @@ describe("prompts", () => {
   it("should build solo system prompt", async () => {
     const { buildSystemPrompt } = await import("../llm/prompts.js");
     const prompt = buildSystemPrompt("solo");
-    expect(prompt).toContain("kimi-code");
+    expect(prompt).toContain("km");
     expect(prompt).toContain("Do NOT use any tools");
   });
 
   it("should build chat system prompt", async () => {
     const { buildSystemPrompt } = await import("../llm/prompts.js");
     const prompt = buildSystemPrompt("chat");
-    expect(prompt).toContain("kimi-code");
+    expect(prompt).toContain("km");
     expect(prompt).toContain("Read");
     expect(prompt).toContain("Write");
   });

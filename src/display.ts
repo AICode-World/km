@@ -20,7 +20,7 @@ export const gray = chalk.gray;
 /** Header banner for each mode */
 export function printHeader(mode: RunMode): void {
   const _disp_dir = dirname(fileURLToPath(import.meta.url));
-  let version = "0.1.0";
+  let version = "0.0.0";
   try {
     const pkg = JSON.parse(readFileSync(join(_disp_dir, "..", "package.json"), "utf-8"));
     version = pkg.version;

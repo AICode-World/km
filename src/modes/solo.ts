@@ -8,7 +8,7 @@ export async function runSolo(query: string, options?: ChatOptions): Promise<voi
   printHeader("solo");
 
   if (!query) {
-    printError("Please provide a question. Usage: kimi-code solo <question>");
+    printError("Please provide a question. Usage: km solo <question>");
     return;
   }
 

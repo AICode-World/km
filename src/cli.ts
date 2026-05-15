@@ -46,7 +46,7 @@ export function createCLI(): Command {
     .description("Initialize km configuration")
     .action(async () => {
       printHeader("solo");
-      printInfo("Setting up kimi-code...\n");
+      printInfo("Setting up km...\n");
 
       const existing = loadConfig();
       let apiKey = existing.api_key;

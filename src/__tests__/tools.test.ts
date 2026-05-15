@@ -7,7 +7,7 @@ describe("tools", () => {
   let tmpDir: string;
 
   beforeAll(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "kimi-code-test-"));
+    tmpDir = mkdtempSync(join(tmpdir(), "km-test-"));
     // Create a test file
     writeFileSync(
       join(tmpDir, "test.txt"),

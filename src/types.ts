@@ -1,4 +1,4 @@
-/* ===== Core types for kimi-code ===== */
+/* ===== Core types for km ===== */
 
 /** Supported Kimi / Moonshot models */
 export type KimiModel =

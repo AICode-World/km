@@ -27,7 +27,7 @@ export async function runPlan(task: string, options?: PlanOptions): Promise<void
   printHeader("plan");
 
   if (!task) {
-    printError("Please provide a task. Usage: kimi-code plan <task>");
+    printError("Please provide a task. Usage: km plan <task>");
     return;
   }
 

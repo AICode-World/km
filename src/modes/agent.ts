@@ -25,7 +25,7 @@ export async function runAgent(task: string, options?: AgentOptions): Promise<vo
   printHeader("agent");
 
   if (!task) {
-    printError("Please provide a task. Usage: kimi-code agent <task>");
+    printError("Please provide a task. Usage: km agent <task>");
     return;
   }
 
