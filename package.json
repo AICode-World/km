@@ -1,0 +1,51 @@
+{
+  "name": "kimi-code",
+  "version": "0.1.0",
+  "description": "Kimi-powered coding agent CLI — plan, code, review, and automate in your terminal",
+  "keywords": ["kimi", "moonshot", "ai", "coding-agent", "cli", "developer-tools"],
+  "homepage": "https://github.com/moonshotai/kimi-code",
+  "license": "MIT",
+  "author": "Moonshot AI",
+  "type": "module",
+  "bin": {
+    "kimi-code": "./bin/kimi-code.cjs"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "dev": "npm run build && node bin/kimi-code.js",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "glob": "^10.3.0",
+    "openai": "^4.52.0",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moonshotai/kimi-code.git"
+  },
+  "bugs": {
+    "url": "https://github.com/moonshotai/kimi-code/issues"
+  }
+}

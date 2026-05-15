@@ -1,0 +1,10 @@
+node_modules/
+dist/
+bin/index.js
+bin/index.mjs
+bin/*.d.ts
+*.tsbuildinfo
+.env
+.env.local
+.tmp/
+data/
