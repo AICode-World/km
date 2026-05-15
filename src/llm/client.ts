@@ -176,7 +176,6 @@ export async function* chatStreaming(
 
 /** List available models from the API */
 export async function listModels(): Promise<string[]> {
-  const cfg = loadConfig();
   const client = createClient();
   const response = await client.models.list();
   return response.data

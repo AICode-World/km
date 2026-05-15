@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, statSync } from "fs";
 import { join, resolve, relative } from "path";
 import { execSync } from "child_process";
+import { mkdirSync } from "fs";
 import { globSync } from "glob";
 import {
   ToolName,
@@ -104,10 +105,9 @@ function executeRead(params: ReadParams): ToolResult {
 function executeWrite(params: WriteParams): ToolResult {
   try {
     const filePath = resolve(params.file_path);
-    const dir = filePath.substring(0, filePath.lastIndexOf("/"));
+    const dir = filePath.substring(0, Math.max(filePath.lastIndexOf("/"), filePath.lastIndexOf("\\")));
     if (dir && !existsSync(dir)) {
-      // Create parent directories
-      execSync(`mkdir -p "${dir}"`, { shell: true });
+      mkdirSync(dir, { recursive: true });
     }
     writeFileSync(filePath, params.content, "utf-8");
     return {
@@ -258,6 +258,8 @@ function executeGrep(params: GrepParams): ToolResult {
     const basePath = params.path ? resolve(params.path) : process.cwd();
     const pattern = params.pattern;
     const maxResults = params.max_results ?? 50;
+    const isWindows = process.platform === "win32";
+    const nullRedirect = isWindows ? "2>nul" : "2>/dev/null";
 
     // Use the pattern directly with grep/ripgrep
     // Fallback to a simple implementation
@@ -265,9 +267,9 @@ function executeGrep(params: GrepParams): ToolResult {
 
     if (params.include && params.include.length > 0) {
       const includes = params.include.map((i) => `--include="${i}"`).join(" ");
-      command = `grep -rn --binary-files=without-match ${includes} "${pattern}" "${basePath}" 2>nul || echo "no matches"`;
+      command = `grep -rn --binary-files=without-match ${includes} "${pattern}" "${basePath}" ${nullRedirect} || echo "no matches"`;
     } else {
-      command = `grep -rn --binary-files=without-match "${pattern}" "${basePath}" 2>nul || echo "no matches"`;
+      command = `grep -rn --binary-files=without-match "${pattern}" "${basePath}" ${nullRedirect} || echo "no matches"`;
     }
 
     const output = execSync(command, {
@@ -275,7 +277,6 @@ function executeGrep(params: GrepParams): ToolResult {
       maxBuffer: 10 * 1024 * 1024,
       timeout: 15_000,
       windowsHide: true,
-      shell: true,
     });
 
     const lines = output.split("\n").filter((l) => l.trim());

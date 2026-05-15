@@ -1,5 +1,5 @@
 import { loadConfig } from "../config.js";
-import { Message, ToolCall, ToolResult, ToolDefinition, KimiModel } from "../types.js";
+import { Message, ToolCall, ToolResult, ToolDefinition, KimiModel, ToolName } from "../types.js";
 import { chat as llmChat } from "../llm/client.js";
 import { printToolCall, printToolResult, printAssistantMessage, printError } from "../display.js";
 import { executeTool, getToolDefinitions } from "../tools/registry.js";
@@ -93,10 +93,12 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
         }
 
         // Execute
-        const result = await executeTool(
-          tc.function.name as ToolCall["function"]["name"],
-          args
-        );
+        if (!isToolName(tc.function.name)) {
+          printError(`Unknown tool requested by model: ${tc.function.name}`);
+          continue;
+        }
+
+        const result = await executeTool(tc.function.name, args);
 
         // Log
         if (!autoApprove) {
@@ -150,4 +152,14 @@ export async function runAgentLoop(options: AgentLoopOptions): Promise<AgentLoop
     success: false,
     error,
   };
+}
+
+function isToolName(name: string): name is ToolName {
+  return name === "Read"
+    || name === "Write"
+    || name === "Edit"
+    || name === "Bash"
+    || name === "Glob"
+    || name === "Grep"
+    || name === "Exit";
 }

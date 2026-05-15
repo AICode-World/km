@@ -144,3 +144,20 @@ export async function promptOneLine(question: string): Promise<string> {
   rl.close();
   return answer;
 }
+
+/** Prompt the user to choose one option from a short list */
+export async function promptChoice(question: string, choices: string[], defaultChoice?: string): Promise<string> {
+  console.log(`\n${question}`);
+  choices.forEach((choice, idx) => console.log(`  ${dim(String(idx + 1).padStart(2, "0"))} ${choice}`));
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const suffix = defaultChoice ? ` (default: ${defaultChoice})` : "";
+  const answer = await rl.question(`${cyan("?")} Choose one${suffix}: `);
+  rl.close();
+  const trimmed = answer.trim();
+  if (!trimmed && defaultChoice) return defaultChoice;
+  if (/^\d+$/.test(trimmed)) {
+    const idx = Number(trimmed) - 1;
+    if (idx >= 0 && idx < choices.length) return choices[idx];
+  }
+  return trimmed || defaultChoice || choices[0];
+}
