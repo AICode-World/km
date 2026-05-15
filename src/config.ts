@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { createInterface } from "readline/promises";
 import { DEFAULT_CONFIG, KimiCodeConfig } from "./types.js";
 
-const CONFIG_DIR_NAME = ".kimi-code";
+const CONFIG_DIR_NAME = ".km";
 const CONFIG_FILE_NAME = "config.json";
 
 function configDir(): string {

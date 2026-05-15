@@ -1,0 +1,7 @@
+{
+  "name": "km",
+  "description": "km - Kimi-powered coding agent CLI. 4 modes: solo, chat, plan, agent.",
+  "homepage": "https://gitee.com/all-xu/km",
+  "private": false,
+  "auto_init": false
+}

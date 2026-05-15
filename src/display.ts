@@ -18,7 +18,7 @@ export const gray = chalk.gray;
 export function printHeader(mode: RunMode): void {
   const version = "0.1.0";
   console.log(
-    `\n  ${cyan("✦")} ${bold("kimi-code")} ${dim(`v${version}`)}  —  ${modeModeLabel(mode)}\n`
+    `\n  ${cyan("✦")} ${bold("km")} ${dim(`v${version}`)}  —  ${modeModeLabel(mode)}\n`
   );
 }
 

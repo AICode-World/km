@@ -22,7 +22,7 @@ export function createCLI(): Command {
   const program = new Command();
 
   program
-    .name("kimi-code")
+    .name("km")
     .description("Kimi-powered coding agent CLI — plan, code, review, and automate")
     .version("0.1.0")
     .option("--api-key <key>", "Moonshot API key (overrides config/env)")
@@ -46,7 +46,7 @@ export function createCLI(): Command {
 
       saveConfig({ api_key: apiKey });
       printSuccess("Configuration saved!");
-      printInfo(`Config file: ~/.kimi-code/config.json`);
+      printInfo(`Config file: ~/.km/config.json`);
       printInfo(`API Base URL: ${existing.base_url}`);
       printInfo(`Default model: ${existing.model}`);
     });

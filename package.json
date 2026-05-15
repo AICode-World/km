@@ -1,14 +1,21 @@
 {
-  "name": "kimi-code",
+  "name": "km",
   "version": "0.1.0",
-  "description": "Kimi-powered coding agent CLI — plan, code, review, and automate in your terminal",
-  "keywords": ["kimi", "moonshot", "ai", "coding-agent", "cli", "developer-tools"],
-  "homepage": "https://github.com/moonshotai/kimi-code",
+  "description": "km - Kimi-powered coding agent CLI",
+  "keywords": [
+    "km",
+    "kimi",
+    "moonshot",
+    "ai",
+    "coding-agent",
+    "cli"
+  ],
+  "homepage": "https://gitee.com/all-xu/km",
   "license": "MIT",
-  "author": "Moonshot AI",
+  "author": "all-xu",
   "type": "module",
   "bin": {
-    "kimi-code": "./bin/kimi-code.cjs"
+    "km": "./bin/index.js"
   },
   "files": [
     "bin/",
@@ -43,9 +50,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/moonshotai/kimi-code.git"
+    "url": "https://gitee.com/all-xu/km.git"
   },
   "bugs": {
-    "url": "https://github.com/moonshotai/kimi-code/issues"
+    "url": "https://gitee.com/all-xu/km/issues"
   }
 }

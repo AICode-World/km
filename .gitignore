@@ -8,3 +8,8 @@ bin/*.d.ts
 .env.local
 .tmp/
 data/
+.idea/
+_fix.py
+_t.cjs
+fix_bin.js
+${APPDATA}/
