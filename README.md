@@ -18,7 +18,13 @@
 
 ## Installation
 
-### Local install (recommended)
+### npm install (recommended)
+
+```bash
+npm install -g @ai-xuyan/km
+```
+
+### From source
 
 ```bash
 git clone https://gitee.com/all-xu/km.git
