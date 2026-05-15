@@ -17,6 +17,7 @@ import {
 } from "../display.js";
 import { loadConfig, saveConfig, setRuntimeConfig } from "../config.js";
 import { runAgentLoop } from "../agent/loop.js";
+import type { KimiModel } from "../types.js";
 
 /**
  * Agent mode: fully autonomous with full tool access.
@@ -143,8 +144,8 @@ export async function runAgentInteractive(options?: AgentOptions): Promise<void>
       const parts = cmd.split(/\s+/);
       const newModel = parts[1];
       if (newModel) {
-        saveConfig({ model: newModel });
-        setRuntimeConfig({ model: newModel as any });
+        saveConfig({ model: newModel as KimiModel });
+        setRuntimeConfig({ model: newModel as KimiModel });
         printSuccess(`Model changed to: ${newModel}`);
       } else {
         const cfg = loadConfig();

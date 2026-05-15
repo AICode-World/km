@@ -1,9 +1,35 @@
 // OpenAI SDK replaced with native fetch (Node 18+)
 import { loadConfig } from "../config.js";
 import { Message, KimiModel, ToolDefinition } from "../types.js";
-import { spinner, dim } from "../display.js";
+import { spinner } from "../display.js";
 
-/** Map our internal ToolDefinition to OpenAI ChatCompletionTool */
+type ChatCompletionMessageParam =
+  | { role: "system"; content: string }
+  | { role: "user"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls?: ToolCallLike[] }
+  | { role: "tool"; tool_call_id: string; content: string };
+
+type ToolCallLike = {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+};
+
+type ChatCompletionResponse = {
+  choices?: Array<{
+    message: {
+      content?: string | null;
+      tool_calls?: ToolCallLike[];
+    };
+  }>;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  data?: Array<{ id: string }>;
+};
+
 function toOpenAITools(defs: ToolDefinition[]) {
   return defs.map((d) => ({
     type: "function" as const,
@@ -15,8 +41,7 @@ function toOpenAITools(defs: ToolDefinition[]) {
   }));
 }
 
-/** Map our internal Message to OpenAI message format */
-function toOpenAIMessages(msgs: Message[]) {
+function toOpenAIMessages(msgs: Message[]): ChatCompletionMessageParam[] {
   const result: ChatCompletionMessageParam[] = [];
   for (const m of msgs) {
     if (m.role === "system") {
@@ -47,21 +72,17 @@ function toOpenAIMessages(msgs: Message[]) {
   return result;
 }
 
-/** Create API request headers */
 function apiHeaders() {
   const cfg = loadConfig();
   return {
-    "Authorization": `Bearer ${cfg.api_key}`,
+    Authorization: `Bearer ${cfg.api_key}`,
     "Content-Type": "application/json",
   };
 }
 
-/** Build API base URL */
 function apiBaseURL(): string {
   return loadConfig().base_url;
 }
-
-// ── Public API ────────────────────────────────────────────// ── Public API ────────────────────────────────────────────
 
 export interface LLMResponse {
   content: string;
@@ -73,10 +94,6 @@ export interface LLMResponse {
   };
 }
 
-/**
- * Send messages to Kimi and get a response (fetch-based, no openai SDK).
- * If tool_defs is provided, function calling is enabled.
- */
 export async function chat(
   messages: Message[],
   options?: {
@@ -89,7 +106,7 @@ export async function chat(
 ): Promise<LLMResponse> {
   const cfg = loadConfig();
   const model = options?.model || cfg.model;
-  const sp = options?.show_spinner !== false ? spinner(`Thinking (${model})…`) : null;
+  const sp = options?.show_spinner !== false ? spinner(`Thinking (${model})...`) : null;
 
   try {
     const body: Record<string, unknown> = {
@@ -113,10 +130,10 @@ export async function chat(
 
     if (!res.ok) {
       const errBody = await res.text();
-      throw new Error(`HTTP ${res.status} ${res.statusText} — ${errBody}`);
+      throw new Error(`HTTP ${res.status} ${res.statusText} - ${errBody}`);
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as ChatCompletionResponse;
     const choice = data.choices?.[0];
     if (!choice) {
       return { content: "" };
@@ -135,7 +152,7 @@ export async function chat(
     };
 
     if (msg.tool_calls && msg.tool_calls.length > 0) {
-      result.tool_calls = msg.tool_calls.map((tc: any) => ({
+      result.tool_calls = msg.tool_calls.map((tc) => ({
         id: tc.id,
         type: "function" as const,
         function: { name: tc.function.name, arguments: tc.function.arguments },
@@ -177,7 +194,7 @@ export async function* chatStreaming(
 
   if (!res.ok) {
     const errBody = await res.text();
-    throw new Error(`Kimi API error: HTTP ${res.status} — ${errBody}`);
+    throw new Error(`Kimi API error: HTTP ${res.status} - ${errBody}`);
   }
 
   const reader = res.body?.getReader();
@@ -199,7 +216,9 @@ export async function* chatStreaming(
       const data = line.slice(6).trim();
       if (data === "[DONE]") return;
       try {
-        const chunk = JSON.parse(data);
+        const chunk = JSON.parse(data) as {
+          choices?: Array<{ delta?: { content?: string } }>;
+        };
         const delta = chunk.choices?.[0]?.delta?.content;
         if (delta) yield delta;
       } catch {
@@ -209,7 +228,6 @@ export async function* chatStreaming(
   }
 }
 
-/** List available models from the API *//** List available models from the API */
 export async function listModels(): Promise<string[]> {
   const res = await fetch(`${apiBaseURL()}/models`, {
     headers: apiHeaders(),
@@ -217,13 +235,12 @@ export async function listModels(): Promise<string[]> {
   if (!res.ok) {
     throw new Error(`Failed to list models: HTTP ${res.status}`);
   }
-  const data = await res.json();
-  return data.data
-    .filter((m: any) => m.id.startsWith("moonshot"))
-    .map((m: any) => m.id);
+  const data = (await res.json()) as { data?: Array<{ id: string }> };
+  return (data.data || [])
+    .filter((m) => m.id.startsWith("moonshot"))
+    .map((m) => m.id);
 }
 
-/** Simple token count estimation (for context management) *//** Simple token count estimation (for context management) */
 export function estimateTokens(text: string): number {
   if (!text) return 0;
   const cnChars = text.match(/[\u4e00-\u9fff]/g)?.length ?? 0;

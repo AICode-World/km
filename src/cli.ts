@@ -23,6 +23,8 @@ import {
   bold,
   cyan,
   dim,
+  green,
+  red,
   yellow,
   divider,
   promptOneLine,
@@ -149,8 +151,6 @@ export function createCLI(): Command {
     .option("--mode <mode>", "Default mode when starting interactively (solo|chat|plan|agent)")
     .option("--task <task>", "Task to run immediately")
     .option("--verbose", "Enable verbose output")
-  .option("--mode <mode>", "Default mode: solo|chat|plan|agent")
-  .option("--task <task>", "Task to run immediately");
 
   program.hook("preAction", async (thisCommand) => {
     const opts = thisCommand.opts<{
@@ -266,8 +266,10 @@ export function createCLI(): Command {
           const ms = Date.now() - start;
           if (res.ok) {
             console.log("  " + bold("  API reachable:") + "   " + green("yes (" + ms + "ms)"));
-            const data = await res.json();
-            const models = data.data.filter((m) => m.id.startsWith("moonshot")).map((m) => m.id);
+            const data = (await res.json()) as { data?: Array<{ id: string }> };
+            const models = (data.data || [])
+              .filter((m) => m.id.startsWith("moonshot"))
+              .map((m) => m.id);
             console.log("  " + bold("  Models found:") + "    " + models.length);
             if (models.length > 0) {
               console.log("  " + bold("  Available:") + "       " + models.slice(0, 5).join(", ") + (models.length > 5 ? "... (+ " + (models.length - 5) + " more)" : ""));
@@ -282,7 +284,7 @@ export function createCLI(): Command {
       console.log("");
 
       // 4. Version
-      const pkg = JSON.parse(fsMod.readFileSync(path.join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf-8"));
+      const pkg = JSON.parse(fsMod.readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "package.json"), "utf-8"));
       console.log("  " + bold("Version:") + "          " + pkg.version);
       console.log("  " + bold("Node:") + "             " + process.version);
       console.log("  " + bold("Platform:") + "         " + process.platform + " " + process.arch);

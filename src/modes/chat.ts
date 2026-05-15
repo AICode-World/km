@@ -10,6 +10,9 @@ import {
   printExit,
   divider,
   readMultilineInput,
+  bold,
+  dim,
+  printSuccess,
 } from "../display.js";
 import { runAgentLoop } from "../agent/loop.js";
 

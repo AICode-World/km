@@ -1,16 +1,14 @@
 // Native ANSI (replaced chalk + ora)
 import { createInterface } from "readline/promises";
-import { ToolCall, ToolResult, RunMode } from "./types.js";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-
-// ── ANSI escape codes (replaces chalk) ────────────────────
+import type { ToolCall, ToolResult, RunMode } from "./types.js";
 
 const RESET = "\x1b[0m";
 
-function ansi(code) {
-  return (s) => `${code}${s}${RESET}`;
+function ansi(code: string) {
+  return (s: string) => `${code}${s}${RESET}`;
 }
 
 export const dim = ansi("\x1b[2m");
@@ -22,93 +20,81 @@ export const cyan = ansi("\x1b[36m");
 export const magenta = ansi("\x1b[35m");
 export const gray = ansi("\x1b[90m");
 
-/** Header banner for each mode */
 export function printHeader(mode: RunMode): void {
-  const _disp_dir = dirname(fileURLToPath(import.meta.url));
+  const dispDir = dirname(fileURLToPath(import.meta.url));
   let version = "0.0.0";
   try {
-    const pkg = JSON.parse(readFileSync(join(_disp_dir, "..", "package.json"), "utf-8"));
+    const pkg = JSON.parse(readFileSync(join(dispDir, "..", "package.json"), "utf-8"));
     version = pkg.version;
-  } catch {}
-  console.log(
-    `\n  ${cyan("✦")} ${bold("km")} ${dim(`v${version}`)}  —  ${modeModeLabel(mode)}\n`
-  );
+  } catch {
+    // ignore
+  }
+  console.log(`\n  ${cyan("✦")} ${bold("km")} ${dim(`v${version}`)}  —  ${dim(modeModeLabel(mode))}\n`);
 }
 
 function modeModeLabel(mode: RunMode): string {
   const labels: Record<RunMode, string> = {
-    solo: "Solo 问答模式",
-    chat: "交互对话模式",
-    plan: "计划执行模式",
-    agent: "自主 Agent 模式",
+    solo: "Solo mode",
+    chat: "Chat mode",
+    plan: "Plan mode",
+    agent: "Agent mode",
   };
-  return dim(labels[mode]);
+  return labels[mode];
 }
 
-/** Print a user message bubble */
 export function printUserMessage(msg: string): void {
-  console.log(`\n${cyan("┌─ You")}`);
-  msg.split("\n").forEach((l) => console.log(`${cyan("│")} ${l}`));
-  console.log(`${cyan("└─")}\n`);
+  console.log(`\n${cyan("┏")} You`);
+  msg.split("\n").forEach((l) => console.log(`${cyan("┃")} ${l}`));
+  console.log(`${cyan("┗")}\n`);
 }
 
-/** Print an assistant message */
 export function printAssistantMessage(msg: string, title = "Assistant"): void {
-  console.log(`\n${green("┌─")} ${bold(title)}`);
-  console.log(`${green("│")}`);
-  msg.split("\n").forEach((l) => console.log(`${green("│")} ${l}`));
-  console.log(`${green("└─")}\n`);
+  console.log(`\n${green("┏")} ${bold(title)}`);
+  console.log(`${green("┃")}`);
+  msg.split("\n").forEach((l) => console.log(`${green("┃")} ${l}`));
+  console.log(`${green("┗")}\n`);
 }
 
-/** Print an error message */
 export function printError(msg: string): void {
-  console.log(`\n${red("✖")} ${msg}\n`);
+  console.log(`\n${red("✗")} ${msg}\n`);
 }
 
-/** Print a warning */
 export function printWarning(msg: string): void {
-  console.log(`\n${yellow("⚠")} ${msg}\n`);
+  console.log(`\n${yellow("!")} ${msg}\n`);
 }
 
-/** Print an info line */
 export function printInfo(msg: string): void {
-  console.log(`${dim("ℹ")} ${msg}`);
+  console.log(`${dim("i")} ${msg}`);
 }
 
-/** Print a success check */
 export function printSuccess(msg: string): void {
-  console.log(`${green("✔")} ${msg}`);
+  console.log(`${green("✓")} ${msg}`);
 }
 
-/** Print a tool call happening */
 export function printToolCall(tc: ToolCall): void {
-  console.log(`  ${cyan("→")} ${bold(tc.function.name)} ${dim(tc.function.arguments)}`);
+  console.log(`  ${cyan("->")} ${bold(tc.function.name)} ${dim(tc.function.arguments)}`);
 }
 
-/** Print tool result */
 export function printToolResult(tr: ToolResult): void {
-  const icon = tr.success ? dim("✔") : red("✖");
+  const icon = tr.success ? dim("✓") : red("✗");
   const lines = tr.output.split("\n").filter(Boolean);
   const preview = lines.slice(0, 5).join("\n  ");
-  console.log(`  ${icon} ${dim(tr.tool_name)}${tr.success ? "" : `: ${tr.error || "failed"}"}`}`);
+  console.log(`  ${icon} ${dim(tr.tool_name)}${tr.success ? "" : `: ${tr.error || "failed"}`}`);
   if (preview) {
     console.log(`  ${dim(preview)}`);
     if (lines.length > 5) console.log(`  ${dim(`... (${lines.length - 5} more lines)`)}`);
   }
 }
 
-/** Print a divider */
 export function divider(): void {
-  console.log(dim("─".repeat(process.stdout.columns || 60)));
+  console.log(dim("=".repeat(process.stdout.columns || 60)));
 }
 
-/** Print mode exit message */
 export function printExit(): void {
   console.log(`\n${dim("Bye!")}\n`);
 }
 
-/** Create a spinner (native, no ora) */
-const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const SPINNER_FRAMES = ["-", "\\", "|", "/"];
 
 export function spinner(text: string) {
   let i = 0;
@@ -122,18 +108,27 @@ export function spinner(text: string) {
   }
 
   return {
-    stop() { clearInterval(id); clearLine(); },
-    succeed(t) { clearInterval(id); clearLine(); console.log(`\x1b[32m✔\x1b[0m ${t || text}`); },
-    fail(t) { clearInterval(id); clearLine(); console.log(`\x1b[31m✖\x1b[0m ${t || text}`); },
+    stop() {
+      clearInterval(id);
+      clearLine();
+    },
+    succeed(t?: string) {
+      clearInterval(id);
+      clearLine();
+      console.log(`\x1b[32m✓\x1b[0m ${t || text}`);
+    },
+    fail(t?: string) {
+      clearInterval(id);
+      clearLine();
+      console.log(`\x1b[31m✗\x1b[0m ${t || text}`);
+    },
   };
 }
 
-/** Format code block for display */
 export function formatCodeBlock(lang: string, code: string): string {
   return `${dim(`\`\`\`${lang}`)}\n${code}\n${dim("```")}`;
 }
 
-/** Show tool approval prompt and return boolean */
 export async function confirmToolCall(tc: ToolCall): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const args = tc.function.arguments;
@@ -144,21 +139,22 @@ export async function confirmToolCall(tc: ToolCall): Promise<boolean> {
   return answer.toLowerCase() !== "n";
 }
 
-/** Read multi-line input from user */
 export async function readMultilineInput(prompt: string): Promise<string> {
   console.log(`\n${prompt} (Ctrl+D or .done to finish)`);
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const lines: string[] = [];
   for await (const line of rl) {
     if (line.trim() === ".done") break;
-    if (line.trim() === "/exit") { rl.close(); return "/exit"; }
+    if (line.trim() === "/exit") {
+      rl.close();
+      return "/exit";
+    }
     lines.push(line);
   }
   rl.close();
   return lines.join("\n");
 }
 
-/** One-line prompt */
 export async function promptOneLine(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await rl.question(`${cyan("?")} ${question} `);
@@ -166,7 +162,6 @@ export async function promptOneLine(question: string): Promise<string> {
   return answer;
 }
 
-/** Prompt the user to choose one option from a short list */
 export async function promptChoice(question: string, choices: string[], defaultChoice?: string): Promise<string> {
   console.log(`\n${question}`);
   choices.forEach((choice, idx) => console.log(`  ${dim(String(idx + 1).padStart(2, "0"))} ${choice}`));
