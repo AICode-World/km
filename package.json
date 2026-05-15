@@ -19,6 +19,7 @@
   },
   "files": [
     "bin/",
+    "scripts/",
     "README.md",
     "LICENSE"
   ],
@@ -28,6 +29,7 @@
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
+    "postinstall": "node scripts/postinstall.js",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
